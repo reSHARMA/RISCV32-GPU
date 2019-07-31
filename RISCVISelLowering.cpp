@@ -359,7 +359,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                   DAG.getConstant(1, DL, MVT::i32)); 
                   SDValue Ops[] = {Value, Hi, Lo, Chain};
                   SDValue newStore = SDValue(
-                      DAG.getMachineNode(RISCV::CUS_STORE, DL, VTList, Ops), 0);
+                      DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
                   return newStore;
           }
           if (AddrPair.getSimpleValueType() == MVT::i64) {
@@ -372,7 +372,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                            doubleAddr, One);
                   SDValue Ops[] = {Value, Hi, Lo, Chain};
                   SDValue newStore = SDValue(
-                      DAG.getMachineNode(RISCV::CUS_STORE, DL, VTList, Ops), 0);
+                      DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
                   return newStore;
           }
           return Op;
