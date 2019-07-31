@@ -58,6 +58,9 @@ public:
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+		                        SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 

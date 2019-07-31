@@ -113,6 +113,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ, XLenVT, Expand);
   setOperationAction(ISD::CTPOP, XLenVT, Expand);
 
+  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
+
   ISD::CondCode FPCCToExtend[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETO,   ISD::SETUEQ,
       ISD::SETUGT, ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE,
@@ -537,6 +539,44 @@ static bool isVariableSDivUDivURem(SDValue Val) {
     return Val.getOperand(0).getOpcode() != ISD::Constant &&
            Val.getOperand(1).getOpcode() != ISD::Constant;
   }
+}
+
+void RISCVTargetLowering::ReplaceNodeResults(SDNode *Node,
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG) const {
+        SDLoc DL(Node);
+        switch (Node->getOpcode()) {
+                default:
+                        llvm_unreachable(
+                            "Don't know how to custom type legalize this "
+                            "operation!");
+                case ISD::UNDEF: {
+                        SDValue un = DAG.getNode(ISD::UNDEF, DL, MVT::i32);
+                        Results.push_back(un);
+                        break;
+                }   
+                case ISD::GlobalAddress: {
+                        GlobalAddressSDNode *N =
+                            cast<GlobalAddressSDNode>(Node);
+                        const GlobalValue *GV = N->getGlobal();
+                        int64_t Offset = N->getOffset();
+                        if (N->getAddressSpace() == 1) {
+                                SDValue GALoHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOHI);
+                                SDValue GALoLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOLO);
+                                SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, MVT::i32, GALoHi), 0); 
+                                SDValue MNLo = SDValue(DAG.getMachineNode(RISCV::ADDI, DL, MVT::i32, MNHi, GALoLo), 0); 
+
+                                SDValue GAHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_HI);
+                                SDValue GALo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LO);
+                                SDValue tempMNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, MVT::i32, GAHi), 0); 
+                                SDValue tempMNLo = SDValue(DAG.getMachineNode(RISCV::ADDI, DL, MVT::i32, tempMNHi, GALo), 0); 
+
+                                SDValue result = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, MNLo, tempMNLo);
+                                Results.push_back(result);
+                        }   
+                        break;
+                }   
+        }   
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
