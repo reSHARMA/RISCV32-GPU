@@ -123,6 +123,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::UNDEF, MVT::i64, Custom);
 
+  setTargetDAGCombine(ISD::LOAD);
+
   ISD::CondCode FPCCToExtend[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETO,   ISD::SETUEQ,
       ISD::SETUGT, ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE,
@@ -628,6 +630,52 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default:
     break;
+  case ISD::LOAD: {
+      LoadSDNode *LD = cast<LoadSDNode>(N);
+      SDLoc DL(LD);
+      SDValue AddrPair = LD->getBasePtr();
+      SDValue Chain = LD->getChain();
+      if (GlobalAddressSDNode *N =
+              dyn_cast<GlobalAddressSDNode>(AddrPair)) {
+              const GlobalValue *GV = N->getGlobal();
+              int64_t Offset = N->getOffset();
+              if (N->getAddressSpace() == 1) {
+                      SDValue GALoHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOHI);
+                      SDValue GALoLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOLO);
+                      SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, MVT::i32, GALoHi), 0);
+                      SDValue MNLo = SDValue(DAG.getMachineNode(RISCV::ADDI, DL, MVT::i32, MNHi, GALoLo), 0);
+                      
+                      SDValue GAHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_HI);
+                      SDValue GALo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LO);
+                      SDValue tempMNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, MVT::i32, GAHi), 0);
+                      SDValue tempMNLo = SDValue(DAG.getMachineNode(RISCV::ADDI, DL, MVT::i32, tempMNHi, GALo), 0);
+                      
+                      SDVTList VTList = DAG.getVTList(MVT::i32, MVT::Other);
+                      SDValue Hi = MNLo; 
+                      SDValue Lo = tempMNLo;
+                      SDValue Ops[] = {Hi, Lo, Chain};
+                      SDValue newLoad = SDValue(DAG.getMachineNode(RISCV::LDW, DL, VTList, Ops), 0);
+                      LLVM_DEBUG(dbgs() << newLoad.getNode() -> getNumValues() << "\n";);
+                      Chain = newLoad.getValue(1);
+                      SDValue RetOps[] = {newLoad, Chain};
+                      return DAG.getMergeValues(RetOps, DL);
+              }
+      }               
+      if (AddrPair.getSimpleValueType() == MVT::i64) {
+              SDValue doubleAddr = AddrPair.getValue(0);
+              SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+              SDValue One = DAG.getConstant(1, DL, MVT::i32);
+              SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, doubleAddr, Zero);
+              SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, doubleAddr, One);
+              SDValue Ops[] = {Hi, Lo, Chain};
+              SDValue newLoad = SDValue(DAG.getMachineNode(RISCV::LDW, DL, VTList, Ops), 0);
+              Chain = newLoad.getValue(1);
+              SDValue RetOps[] = {newLoad, Chain};
+              return DAG.getMergeValues(RetOps, DL);
+      }
+      return SDValue();
+      break;
+  }
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA: {
