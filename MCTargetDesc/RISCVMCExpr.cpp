@@ -135,6 +135,8 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
       return true;
     case VK_RISCV_LO:
     case VK_RISCV_HI:
+    case VK_RISCV_LOHI:
+    case VK_RISCV_LOLO:
     case VK_RISCV_PCREL_LO:
     case VK_RISCV_PCREL_HI:
       return false;
@@ -152,6 +154,8 @@ RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
   return StringSwitch<RISCVMCExpr::VariantKind>(name)
       .Case("lo", VK_RISCV_LO)
       .Case("hi", VK_RISCV_HI)
+      .Case("lohi", VK_RISCV_LOHI)
+      .Case("lolo", VK_RISCV_LOLO)
       .Case("pcrel_lo", VK_RISCV_PCREL_LO)
       .Case("pcrel_hi", VK_RISCV_PCREL_HI)
       .Default(VK_RISCV_Invalid);
@@ -165,6 +169,10 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
     return "lo";
   case VK_RISCV_HI:
     return "hi";
+  case VK_RISCV_LOHI:
+    return "lohi";
+  case VK_RISCV_LOLO:
+    return "lolo";
   case VK_RISCV_PCREL_LO:
     return "pcrel_lo";
   case VK_RISCV_PCREL_HI:
@@ -198,5 +206,9 @@ int64_t RISCVMCExpr::evaluateAsInt64(int64_t Value) const {
   case VK_RISCV_HI:
     // Add 1 if bit 11 is 1, to compensate for low 12 bits being negative.
     return ((Value + 0x800) >> 12) & 0xfffff;
+  case VK_RISCV_LOHI:
+    return (((Value << 32) + 0x800) >> 12) & 0xfffff;
+  case VK_RISCV_LOLO:
+    return SignExtend64<12>(Value << 32);
   }
 }
