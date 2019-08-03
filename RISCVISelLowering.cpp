@@ -123,6 +123,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::UNDEF, MVT::i64, Custom);
 
+  // Lower load at DAG Combine stage
   setTargetDAGCombine(ISD::LOAD);
 
   ISD::CondCode FPCCToExtend[] = {
@@ -358,6 +359,7 @@ SDValue RISCVTargetLowering::lowerSTORE(SDValue Op,
   SDVTList VTList = DAG.getVTList(MVT::Other);
   SDValue Value = SD->getValue(), Chain = SD->getChain();
   SDLoc DL(SD);
+  // if address is a BUILD_PAIR
   if (AddrPair.getOpcode() == ISD::BUILD_PAIR) {
           SDValue Hi =
               DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddrPair,
@@ -370,6 +372,9 @@ SDValue RISCVTargetLowering::lowerSTORE(SDValue Op,
               DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
           return newStore;
   }
+  // if address is a 64 bit legal value example,
+  // add rd GlobalAddress rs1
+  // store value rd
   if (AddrPair.getSimpleValueType() == MVT::i64) {
           SDValue doubleAddr = AddrPair.getValue(0);
           SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
@@ -608,6 +613,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *Node,
                         const GlobalValue *GV = N->getGlobal();
                         int64_t Offset = N->getOffset();
                         if (N->getAddressSpace() == 1) {
+				// For a 64 bit address in address space 1, 0xABCD
+				// GALoHi = 0xC	 GALo = 0xB
+				// GALoLo = 0xD	 MNLo = 0xCD
+				// GAHi = 0xA 	 tempMNLo = 0xAB
                                 SDValue GALoHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOHI);
                                 SDValue GALoLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0, RISCVII::MO_LOLO);
                                 SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, MVT::i32, GALoHi), 0); 
@@ -658,7 +667,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                       SDValue Lo = tempMNLo;
                       SDValue Ops[] = {Hi, Lo, Chain};
                       SDValue newLoad = SDValue(DAG.getMachineNode(RISCV::LDW, DL, VTList, Ops), 0);
-                      LLVM_DEBUG(dbgs() << newLoad.getNode() -> getNumValues() << "\n";);
                       Chain = newLoad.getValue(1);
                       SDValue RetOps[] = {newLoad, Chain};
                       return DAG.getMergeValues(RetOps, DL);
