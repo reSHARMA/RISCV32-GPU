@@ -346,41 +346,44 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
-  case ISD::STORE: {
-          StoreSDNode *SD = cast<StoreSDNode>(Op);
-          SDValue AddrPair = SD->getBasePtr();
-          SDVTList VTList = DAG.getVTList(MVT::Other);
-          SDValue Value = SD->getValue(), Chain = SD->getChain();
-          SDLoc DL(SD);
-          if (AddrPair.getOpcode() == ISD::BUILD_PAIR) {
-                  SDValue Hi =
-                      DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddrPair,
-                                  DAG.getConstant(0, DL, MVT::i32));
-                  SDValue Lo = 
-                      DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddrPair,
-                                  DAG.getConstant(1, DL, MVT::i32)); 
-                  SDValue Ops[] = {Value, Hi, Lo, Chain};
-                  SDValue newStore = SDValue(
-                      DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
-                  return newStore;
-          }
-          if (AddrPair.getSimpleValueType() == MVT::i64) {
-                  SDValue doubleAddr = AddrPair.getValue(0);
-                  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
-                  SDValue One = DAG.getConstant(1, DL, MVT::i32);
-                  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
-                                           doubleAddr, Zero);
-                  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
-                                           doubleAddr, One);
-                  SDValue Ops[] = {Value, Hi, Lo, Chain};
-                  SDValue newStore = SDValue(
-                      DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
-                  return newStore;
-          }
-          return Op;
-          break;
-    }
+  case ISD::STORE:
+    return lowerSTORE(Op, DAG);
   }
+}
+
+SDValue RISCVTargetLowering::lowerSTORE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  StoreSDNode *SD = cast<StoreSDNode>(Op);
+  SDValue AddrPair = SD->getBasePtr();
+  SDVTList VTList = DAG.getVTList(MVT::Other);
+  SDValue Value = SD->getValue(), Chain = SD->getChain();
+  SDLoc DL(SD);
+  if (AddrPair.getOpcode() == ISD::BUILD_PAIR) {
+          SDValue Hi =
+              DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddrPair,
+                          DAG.getConstant(0, DL, MVT::i32));
+          SDValue Lo = 
+              DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddrPair,
+                          DAG.getConstant(1, DL, MVT::i32)); 
+          SDValue Ops[] = {Value, Hi, Lo, Chain};
+          SDValue newStore = SDValue(
+              DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
+          return newStore;
+  }
+  if (AddrPair.getSimpleValueType() == MVT::i64) {
+          SDValue doubleAddr = AddrPair.getValue(0);
+          SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+          SDValue One = DAG.getConstant(1, DL, MVT::i32);
+          SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                                   doubleAddr, Zero);
+          SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                                   doubleAddr, One);
+          SDValue Ops[] = {Value, Hi, Lo, Chain};
+          SDValue newStore = SDValue(
+              DAG.getMachineNode(RISCV::SDW, DL, VTList, Ops), 0);
+          return newStore;
+  }
+  return Op;
 }
 
 SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
