@@ -1,11 +1,3 @@
-- title: Getting Started
+- title: RISCV GPU ISA
   docs:
   - home
-  - themes
-  - customization
-
-- title: Examples
-  docs:
-  - cheatsheet
-  - font-awesome
-  - bootstrap
