@@ -262,7 +262,7 @@ class Store_rri<bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class Store_rrr<bits<7> funct7, bits<3> funct3, string opcodestr>
-    : RVInstR<funct7, funct3, OPC_STORE, (outs), (GPR:$rd, ins GPR:$rs1, GPR:$rs2),
+    : RVInstR<funct7, funct3, OPC_STORE, (outs), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
               opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
@@ -379,7 +379,7 @@ def OR   : ALU_rr<0b0000000, 0b110, "or">;
 def AND  : ALU_rr<0b0000000, 0b111, "and">;
 
 def SDW	 : Store_rrr<0b0000010, 0b000, "sdw">;
-def LDW	 : Load_rr<b0000010, 0b001, "ldw">;
+def LDW	 : Load_rr<0b0000010, 0b001, "ldw">;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def FENCE : RVInstI<0b000, OPC_MISC_MEM, (outs),

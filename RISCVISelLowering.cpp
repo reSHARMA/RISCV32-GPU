@@ -675,6 +675,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (AddrPair.getSimpleValueType() == MVT::i64) {
               SDValue doubleAddr = AddrPair.getValue(0);
               SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+	      SDVTList VTList = DAG.getVTList(MVT::i32, MVT::Other);
               SDValue One = DAG.getConstant(1, DL, MVT::i32);
               SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, doubleAddr, Zero);
               SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, doubleAddr, One);

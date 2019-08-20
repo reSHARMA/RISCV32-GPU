@@ -36,7 +36,7 @@ static std::string computeDataLayout(const Triple &TT) {
     return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
   } else {
     assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-    return "e-m:e-p:64:64-p1:64:32-i64:64-n32-S128";
+    return "e-m:e-p:32:32-p1:64:32-i64:64-n32-S128";
   }
 }
 
