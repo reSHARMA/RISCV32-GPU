@@ -1,6 +1,6 @@
 # GSoC 2019 Work Submission
 
-## Foundation: [FOSSi](fossi-foundation.org)
+## Organization: [FOSSi](fossi-foundation.org)
 ## Mentor: Prof. Michael Taylor
 
 ### Supporting 64 bit pointers in 32 bit RISCV LLVM backend
